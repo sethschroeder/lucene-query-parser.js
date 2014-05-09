@@ -72,6 +72,23 @@
  * 
  */
  
+{
+  {
+    function extractLanguage(array) {
+      return array[0] + array[1];
+    }
+    function extractAllLanguages(language_expression) {
+      var languages = [];
+      for (var i = 0; i < language_expression[0].length; ++i) {
+        var language_comma = language_expression[0][i];
+        languages.push(extractLanguage(language_comma[0]));
+      }
+      languages.push(extractLanguage(language_expression[1]));
+      return languages.join(',');
+    }
+  }
+}
+
 start
   = _* node:node+ 
     { 
@@ -167,9 +184,15 @@ fieldname
     { 
         return fieldname; 
     }
+
+language_exp
+  = (language_prefix ',')* language_prefix '|'
+
+language_prefix
+  = [a-z] [a-z]
     
 term
-  = op:prefix_operator_exp? term:quoted_term proximity:proximity_modifier? boost:boost_modifier? _*
+  = op:prefix_operator_exp? languages:language_exp? term:quoted_term proximity:proximity_modifier? boost:boost_modifier? _*
       {
         var result = { 'term': term };
         
@@ -185,10 +208,13 @@ term
         {
             result['prefix'] = op;
         }
-            
+        if (languages)
+        {
+            result['language'] = extractAllLanguages(languages);
+        }
         return result;
     }
-  / op:prefix_operator_exp? term:unquoted_term similarity:fuzzy_modifier? boost:boost_modifier? _*
+  / op:prefix_operator_exp? languages:language_exp? term:unquoted_term similarity:fuzzy_modifier? boost:boost_modifier? _*
     {
         var result = { 'term': term };
         if('' != similarity)
@@ -202,6 +228,10 @@ term
         if('' != op)
         {
             result['prefix'] = op;
+        }
+        if (languages)
+        {
+            result['language'] = extractAllLanguages(languages);
         }
         return result;
     }
